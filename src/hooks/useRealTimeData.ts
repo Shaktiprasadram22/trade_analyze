@@ -87,6 +87,11 @@ export const useRealTimeData = () => {
       if (Math.random() < 0.2) {
         setMarketSentiment(generateMarketSentiment());
       }
+
+      // Update news articles occasionally
+      if (Math.random() < 0.1) {
+        setNewsArticles(generateNewsArticles());
+      }
     }, 5000);
 
     return () => clearInterval(interval);

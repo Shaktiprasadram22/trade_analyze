@@ -14,6 +14,11 @@ import { ExportModal } from './ExportModal';
 import { QuickActions } from './QuickActions';
 import { LiveDataIndicator } from './LiveDataIndicator';
 import { KeyboardShortcuts } from './KeyboardShortcuts';
+import { NiftyTrending } from './NiftyTrending';
+import { TwitterAnalytics } from './TwitterAnalytics';
+import { MarketSentiment } from './MarketSentiment';
+import { SentimentDashboard } from './SentimentDashboard';
+import { useRealTimeData } from '../hooks/useRealTimeData';
 import { 
   BarChart3, 
   Newspaper, 
@@ -27,16 +32,32 @@ import {
   RefreshCw,
   Target,
   Maximize2,
-  Minimize2
+  Minimize2,
+  MessageCircle,
+  Activity,
+  Eye
 } from 'lucide-react';
 
 export const ComprehensiveDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'recommendations' | 'correlation' | 'news' | 'portfolio' | 'sentiment' | 'community' | 'technical' | 'customize'>('recommendations');
+  const [activeTab, setActiveTab] = useState<'overview' | 'recommendations' | 'correlation' | 'news' | 'portfolio' | 'sentiment' | 'community' | 'technical' | 'customize'>('overview');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportData, setExportData] = useState<any>(null);
 
+  const {
+    trendingTopics,
+    portfolioAssets,
+    marketSentiment,
+    niftyStocks,
+    newsArticles,
+    sentimentHeatmap,
+    isConnected,
+    addAsset,
+    removeAsset,
+  } = useRealTimeData();
+
   const tabs = [
+    { id: 'overview', label: 'Market Overview', icon: Activity, color: 'text-blue-500' },
     { id: 'recommendations', label: 'AI Recommendations', icon: Target, color: 'text-emerald-500' },
     { id: 'correlation', label: 'Correlation Analysis', icon: BarChart3, color: 'text-blue-500' },
     { id: 'news', label: 'News & Analysis', icon: Newspaper, color: 'text-green-500' },
@@ -66,7 +87,12 @@ export const ComprehensiveDashboard: React.FC = () => {
     const data = {
       tab: activeTab,
       timestamp: new Date().toISOString(),
-      data: `Sample data for ${activeTab}`,
+      trendingTopics: activeTab === 'overview' ? trendingTopics : undefined,
+      niftyStocks: activeTab === 'overview' ? niftyStocks : undefined,
+      portfolioAssets: activeTab === 'portfolio' ? portfolioAssets : undefined,
+      marketSentiment: activeTab === 'sentiment' ? marketSentiment : undefined,
+      newsArticles: activeTab === 'news' ? newsArticles : undefined,
+      sentimentHeatmap: activeTab === 'sentiment' ? sentimentHeatmap : undefined,
     };
     setExportData(data);
     setShowExportModal(true);
@@ -157,10 +183,85 @@ export const ComprehensiveDashboard: React.FC = () => {
 
         {/* Tab Content */}
         <div className="bg-gray-800/30 backdrop-blur-xl rounded-2xl p-8 border border-gray-700/50">
+          {activeTab === 'overview' && (
+            <div className="space-y-8">
+              {/* Comprehensive Sentiment Dashboard */}
+              <SentimentDashboard />
+              
+              {/* Nifty Trending Stocks */}
+              <NiftyTrending stocks={niftyStocks} />
+              
+              {/* Twitter Analytics */}
+              <TwitterAnalytics trendingTopics={trendingTopics} />
+              
+              {/* Market Sentiment and Portfolio Side by Side */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                      <Wallet className="h-6 w-6 text-emerald-500" />
+                      <h2 className="text-xl font-semibold text-white">Portfolio Overview</h2>
+                    </div>
+                  </div>
+                  
+                  {/* Portfolio Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-gray-900/50 rounded-xl p-4">
+                      <p className="text-sm text-gray-400 mb-1">Total Value</p>
+                      <p className="text-2xl font-bold text-white">
+                        ${portfolioAssets.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="bg-gray-900/50 rounded-xl p-4">
+                      <p className="text-sm text-gray-400 mb-1">Assets</p>
+                      <p className="text-2xl font-bold text-white">{portfolioAssets.length}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Top Assets */}
+                  <div className="space-y-3">
+                    <h3 className="text-white font-semibold">Top Holdings</h3>
+                    {portfolioAssets.slice(0, 3).map((asset) => {
+                      const pnl = (asset.currentPrice - asset.purchasePrice) * asset.quantity;
+                      const pnlPercent = ((asset.currentPrice - asset.purchasePrice) / asset.purchasePrice) * 100;
+                      
+                      return (
+                        <div key={asset.id} className="flex items-center justify-between bg-gray-900/50 rounded-lg p-3">
+                          <div>
+                            <h4 className="font-semibold text-white">{asset.symbol}</h4>
+                            <p className="text-sm text-gray-400">{asset.name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-white">${(asset.currentPrice * asset.quantity).toLocaleString()}</p>
+                            <p className={`text-sm ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%)
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                <MarketSentiment sentiment={marketSentiment} />
+              </div>
+            </div>
+          )}
+          
           {activeTab === 'recommendations' && <StockRecommendationSystem />}
           {activeTab === 'correlation' && <CorrelationAnalysis />}
           {activeTab === 'news' && <NewsAggregation />}
-          {activeTab === 'portfolio' && <AdvancedPortfolio />}
+          {activeTab === 'portfolio' && (
+            <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 border border-gray-700">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <Wallet className="h-6 w-6 text-emerald-500" />
+                  <h2 className="text-xl font-semibold text-white">Portfolio Management</h2>
+                </div>
+              </div>
+              <AdvancedPortfolio />
+            </div>
+          )}
           {activeTab === 'sentiment' && <SentimentHeatmap />}
           {activeTab === 'community' && <CommunityFeatures />}
           {activeTab === 'technical' && <TechnicalFeatures />}
@@ -168,7 +269,7 @@ export const ComprehensiveDashboard: React.FC = () => {
         </div>
 
         {/* Quick Stats Footer */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-colors duration-200">
             <div className="flex items-center space-x-3">
               <div className="bg-emerald-500/20 p-2 rounded-lg">
@@ -213,6 +314,18 @@ export const ComprehensiveDashboard: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-400">Sentiment Score</p>
                 <p className="text-xl font-bold text-white">72.5</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-colors duration-200">
+            <div className="flex items-center space-x-3">
+              <div className="bg-orange-500/20 p-2 rounded-lg">
+                <Activity className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Nifty Trending</p>
+                <p className="text-xl font-bold text-white">{niftyStocks.length}</p>
               </div>
             </div>
           </div>

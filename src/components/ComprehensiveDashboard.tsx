@@ -7,6 +7,13 @@ import { CommunityFeatures } from './CommunityFeatures';
 import { TechnicalFeatures } from './TechnicalFeatures';
 import { DashboardCustomization } from './DashboardCustomization';
 import { StockRecommendationSystem } from './StockRecommendationSystem';
+import { AlertSystem } from './AlertSystem';
+import { SearchBar } from './SearchBar';
+import { ThemeToggle } from './ThemeToggle';
+import { ExportModal } from './ExportModal';
+import { QuickActions } from './QuickActions';
+import { LiveDataIndicator } from './LiveDataIndicator';
+import { KeyboardShortcuts } from './KeyboardShortcuts';
 import { 
   BarChart3, 
   Newspaper, 
@@ -18,11 +25,16 @@ import {
   Grid,
   Download,
   RefreshCw,
-  Target
+  Target,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 export const ComprehensiveDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'recommendations' | 'correlation' | 'news' | 'portfolio' | 'sentiment' | 'community' | 'technical' | 'customize'>('recommendations');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportData, setExportData] = useState<any>(null);
 
   const tabs = [
     { id: 'recommendations', label: 'AI Recommendations', icon: Target, color: 'text-emerald-500' },
@@ -34,6 +46,41 @@ export const ComprehensiveDashboard: React.FC = () => {
     { id: 'technical', label: 'Technical Features', icon: Code, color: 'text-orange-500' },
     { id: 'customize', label: 'Customize', icon: Settings, color: 'text-gray-500' },
   ];
+
+  const handleRefresh = () => {
+    // Simulate data refresh
+    const refreshButton = document.querySelector('[data-refresh]') as HTMLButtonElement;
+    if (refreshButton) {
+      refreshButton.classList.add('animate-spin');
+      setTimeout(() => {
+        refreshButton.classList.remove('animate-spin');
+      }, 1000);
+    }
+    
+    // Trigger refresh for current tab
+    window.dispatchEvent(new CustomEvent('dataRefresh', { detail: { tab: activeTab } }));
+  };
+
+  const handleExport = () => {
+    // Generate export data based on current tab
+    const data = {
+      tab: activeTab,
+      timestamp: new Date().toISOString(),
+      data: `Sample data for ${activeTab}`,
+    };
+    setExportData(data);
+    setShowExportModal(true);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -51,20 +98,37 @@ export const ComprehensiveDashboard: React.FC = () => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200">
+            <SearchBar />
+            
+            <button
+              onClick={handleRefresh}
+              data-refresh
+              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+            >
               <RefreshCw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
             
-            <button className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200">
+            <button
+              onClick={handleExport}
+              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+            >
               <Download className="h-4 w-4" />
               <span>Export</span>
             </button>
+
+            <button
+              onClick={toggleFullscreen}
+              className="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors duration-200"
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+
+            <ThemeToggle />
+            <AlertSystem />
+            <KeyboardShortcuts />
             
-            <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-xs text-emerald-500 font-medium">LIVE DATA</span>
-            </div>
+            <LiveDataIndicator />
           </div>
         </div>
 
@@ -105,7 +169,7 @@ export const ComprehensiveDashboard: React.FC = () => {
 
         {/* Quick Stats Footer */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700">
+          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-colors duration-200">
             <div className="flex items-center space-x-3">
               <div className="bg-emerald-500/20 p-2 rounded-lg">
                 <Target className="h-5 w-5 text-emerald-500" />
@@ -117,7 +181,7 @@ export const ComprehensiveDashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700">
+          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-colors duration-200">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-500/20 p-2 rounded-lg">
                 <BarChart3 className="h-5 w-5 text-blue-500" />
@@ -129,7 +193,7 @@ export const ComprehensiveDashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700">
+          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-colors duration-200">
             <div className="flex items-center space-x-3">
               <div className="bg-green-500/20 p-2 rounded-lg">
                 <Newspaper className="h-5 w-5 text-green-500" />
@@ -141,7 +205,7 @@ export const ComprehensiveDashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700">
+          <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-colors duration-200">
             <div className="flex items-center space-x-3">
               <div className="bg-purple-500/20 p-2 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-purple-500" />
@@ -154,6 +218,17 @@ export const ComprehensiveDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Quick Actions */}
+      <QuickActions />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        data={exportData}
+        title={`${activeTab} Data`}
+      />
     </div>
   );
 };

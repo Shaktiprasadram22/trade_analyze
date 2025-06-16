@@ -1,18 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Plus, Trash2, BarChart3, AlertTriangle, Target } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Plus, Trash2, BarChart3, AlertTriangle, Target, Download, RefreshCw } from 'lucide-react';
 import { PortfolioAsset, RiskMetrics } from '../types';
+import { ExportModal } from './ExportModal';
 
 export const AdvancedPortfolio: React.FC = () => {
   const [assets, setAssets] = useState<PortfolioAsset[]>([]);
   const [riskMetrics, setRiskMetrics] = useState<RiskMetrics | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [rebalanceRecommendations, setRebalanceRecommendations] = useState<any[]>([]);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     generatePortfolioAssets();
     calculateRiskMetrics();
     generateRebalanceRecommendations();
+
+    // Listen for refresh events
+    const handleRefresh = () => {
+      refreshPortfolioData();
+    };
+
+    window.addEventListener('dataRefresh', handleRefresh);
+    return () => window.removeEventListener('dataRefresh', handleRefresh);
   }, []);
+
+  const refreshPortfolioData = async () => {
+    setIsRefreshing(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Update prices with realistic changes
+    setAssets(prev => prev.map(asset => ({
+      ...asset,
+      currentPrice: asset.currentPrice * (1 + (Math.random() - 0.5) * 0.02),
+      change24h: asset.change24h + (Math.random() - 0.5) * 2,
+    })));
+    
+    setIsRefreshing(false);
+  };
 
   const generatePortfolioAssets = () => {
     const portfolioAssets: PortfolioAsset[] = [
@@ -77,8 +104,8 @@ export const AdvancedPortfolio: React.FC = () => {
       sharpeRatio: 1.05,
       volatility: 0.42,
       beta: 1.45,
-      var95: -0.08, // 8% Value at Risk
-      maxDrawdown: -0.15, // 15% max drawdown
+      var95: -0.08,
+      maxDrawdown: -0.15,
       diversificationRatio: 0.72,
     };
     setRiskMetrics(metrics);
@@ -112,6 +139,32 @@ export const AdvancedPortfolio: React.FC = () => {
       },
     ];
     setRebalanceRecommendations(recommendations);
+  };
+
+  const addAsset = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const newAsset: PortfolioAsset = {
+      id: `asset-${Date.now()}`,
+      symbol: formData.get('symbol') as string,
+      name: formData.get('name') as string,
+      quantity: parseFloat(formData.get('quantity') as string),
+      currentPrice: parseFloat(formData.get('price') as string),
+      purchasePrice: parseFloat(formData.get('price') as string),
+      change24h: 0,
+    };
+    setAssets(prev => [...prev, newAsset]);
+    setShowAddForm(false);
+    e.currentTarget.reset();
+  };
+
+  const removeAsset = (id: string) => {
+    setAssets(prev => prev.filter(asset => asset.id !== id));
+  };
+
+  const applyRebalancing = () => {
+    // Simulate rebalancing
+    alert('Rebalancing recommendations applied successfully!');
   };
 
   const totalValue = assets.reduce((sum, asset) => sum + (asset.currentPrice * asset.quantity), 0);
@@ -158,25 +211,44 @@ export const AdvancedPortfolio: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-white">Advanced Portfolio Management</h3>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Asset</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={refreshPortfolioData}
+            disabled={isRefreshing}
+            className="bg-gray-700 hover:bg-gray-600 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+          
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export</span>
+          </button>
+          
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Asset</span>
+          </button>
+        </div>
       </div>
 
       {/* Portfolio Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gray-900/50 rounded-xl p-4">
+        <div className="bg-gray-900/50 rounded-xl p-4 hover:bg-gray-900/70 transition-colors duration-200">
           <p className="text-sm text-gray-400 mb-1">Total Value</p>
           <p className="text-2xl font-bold text-white">
             ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
         </div>
         
-        <div className="bg-gray-900/50 rounded-xl p-4">
+        <div className="bg-gray-900/50 rounded-xl p-4 hover:bg-gray-900/70 transition-colors duration-200">
           <p className="text-sm text-gray-400 mb-1">Total P&L</p>
           <div className="flex items-center space-x-2">
             <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -190,18 +262,70 @@ export const AdvancedPortfolio: React.FC = () => {
           </div>
         </div>
         
-        <div className="bg-gray-900/50 rounded-xl p-4">
+        <div className="bg-gray-900/50 rounded-xl p-4 hover:bg-gray-900/70 transition-colors duration-200">
           <p className="text-sm text-gray-400 mb-1">Total Return</p>
           <p className={`text-2xl font-bold ${totalPnLPercent >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
             {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
           </p>
         </div>
         
-        <div className="bg-gray-900/50 rounded-xl p-4">
+        <div className="bg-gray-900/50 rounded-xl p-4 hover:bg-gray-900/70 transition-colors duration-200">
           <p className="text-sm text-gray-400 mb-1">Assets</p>
           <p className="text-2xl font-bold text-white">{assets.length}</p>
         </div>
       </div>
+
+      {/* Add Asset Form */}
+      {showAddForm && (
+        <form onSubmit={addAsset} className="bg-gray-900/50 rounded-xl p-6 border border-gray-700">
+          <h4 className="text-white font-semibold mb-4">Add New Asset</h4>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              name="symbol"
+              placeholder="Symbol (e.g., BTC)"
+              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-colors duration-200"
+              required
+            />
+            <input
+              name="name"
+              placeholder="Asset Name"
+              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-colors duration-200"
+              required
+            />
+            <input
+              name="quantity"
+              type="number"
+              step="0.000001"
+              placeholder="Quantity"
+              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-colors duration-200"
+              required
+            />
+            <input
+              name="price"
+              type="number"
+              step="0.01"
+              placeholder="Current Price"
+              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-colors duration-200"
+              required
+            />
+          </div>
+          <div className="flex justify-end space-x-2 mt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+            >
+              Add Asset
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Risk Metrics */}
       {riskMetrics && (
@@ -270,7 +394,7 @@ export const AdvancedPortfolio: React.FC = () => {
             return (
               <div
                 key={asset.id}
-                className="bg-gray-800/50 rounded-xl p-4 border border-gray-700"
+                className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-all duration-200"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
@@ -280,11 +404,20 @@ export const AdvancedPortfolio: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-white">
-                      ${(asset.currentPrice * asset.quantity).toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-400">{weight.toFixed(1)}% of portfolio</p>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-white">
+                        ${(asset.currentPrice * asset.quantity).toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-400">{weight.toFixed(1)}% of portfolio</p>
+                    </div>
+                    
+                    <button
+                      onClick={() => removeAsset(asset.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors duration-200"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
                 
@@ -344,7 +477,7 @@ export const AdvancedPortfolio: React.FC = () => {
           {rebalanceRecommendations.map((rec, index) => (
             <div
               key={index}
-              className="bg-gray-800/50 rounded-xl p-4 border border-gray-700"
+              className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 hover:border-gray-600 transition-all duration-200"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-3">
@@ -367,11 +500,22 @@ export const AdvancedPortfolio: React.FC = () => {
         </div>
         
         <div className="mt-4 pt-4 border-t border-gray-700">
-          <button className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg transition-colors duration-200">
+          <button 
+            onClick={applyRebalancing}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg transition-colors duration-200"
+          >
             Apply Recommended Rebalancing
           </button>
         </div>
       </div>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        data={assets}
+        title="Portfolio Data"
+      />
     </div>
   );
 };
